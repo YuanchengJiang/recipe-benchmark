@@ -1,0 +1,15 @@
+{
+    "retaddr": OFF,
+    "funcptr": OFF,
+    "GOT": OFF,
+    "hook": OFF,
+    "exit": OFF,
+    "rtld_offset": -528,
+    "rtld_offset_32": -264,
+    "jmpbuf": OFF,
+    "read": OFF,
+    "memcpy": OFF,
+    "bcopy": OFF,
+    "homebrew": OFF,
+    "buffer_size": 64,
+}

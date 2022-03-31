@@ -1,0 +1,140 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdarg.h>
+#include <assert.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <sys/ucontext.h>
+#include "RecIPE.h"
+
+#define BUFFER_SIZE {config[buffer_size]}
+
+/* hook target */
+extern void (*__free_hook) (void *__ptr,const void *);
+extern void *_rtld_global;
+#ifdef __x86_64__
+    int rtld_offset = {config[rtld_offset]};
+#endif 
+#ifdef __i386__
+    int rtld_offset = {config[rtld_offset_32]};
+#endif 
+char *target = NULL;
+char value_before[ADDR_SIZE];
+char value_after[ADDR_SIZE];
+
+static char a[BUFFER_SIZE]="init";
+static char b[BUFFER_SIZE]="init";
+static char c[BUFFER_SIZE]="init";
+static char d[BUFFER_SIZE]="init";
+
+void vul()
+{{
+    assert(BUFFER_SIZE>=ADDR_SIZE);
+    {config[jmpbuf]}jmp_buf env;
+    {config[jmpbuf]}setjmp(env);
+
+    char *l[4] = {{a,b,c,d}};
+    qsort(l, 4, sizeof(char *), ptraddr_compare);
+
+    char *input_buffer = l[0];
+    char *guard_buffer = l[1];
+    size_t *pointer = (size_t *)l[2];
+    *(size_t *)pointer = l[3];
+
+    /* we assume that the pointer is in higher address */
+    assert(pointer>input_buffer);
+    int offset = (char *)pointer - input_buffer;
+
+    /* initialization */
+    memset(guard_buffer, GUARD_CHAR, BUFFER_SIZE);
+
+    /* choose target */
+    {config[retaddr]}target = RET_ADDR_PTR;
+    {config[funcptr]}void (*funcptr)() = &foo;
+    {config[funcptr]}char *target = &funcptr;
+    {config[GOT]}target = &getuid; // we use elf.got['getuid'] in DefEval to get address
+    /* This is for __free_hook hijacking */
+    {config[hook]}char *bad_chunk = malloc(0x30);
+    {config[hook]}strcpy(bad_chunk, cmd);
+    {config[hook]}target = &__free_hook;
+    {config[exit]}target = _rtld_global + rtld_offset;
+    {config[jmpbuf]}target = (uintptr_t*) (((uintptr_t) env) + PC_ENV_OFFSET);
+
+    /* leak address information */
+    printf("pointer_addr:%p input_addr:%p target_addr:%p bad_addr:%p\n", pointer, input_buffer, target, &jump_to_me);
+    size_t corruption_size = ADDR_SIZE;
+    size_t readin_length = offset + corruption_size;
+
+    /* save value_before */
+    memcpy(value_before, pointer, ADDR_SIZE);
+
+    /* choose function and stack overflow */
+    {config[read]}read(0, input_buffer, readin_length);
+    if("//"=="{config[read]}"){{
+        /* better in heap. Do not mess up the stack */
+        char *readin_buffer = (char *)malloc(readin_length);
+        read(0, readin_buffer, readin_length);
+        {config[memcpy]}memcpy(input_buffer, readin_buffer, readin_length);
+        {config[bcopy]}bcopy(readin_buffer, input_buffer, readin_length);
+        {config[homebrew]}homebrew_memcpy(input_buffer, readin_buffer, readin_length);
+    }}
+
+    /* save value_after */
+    memcpy(value_after, pointer, ADDR_SIZE);
+
+    /* attack success checks */
+    /* if pointer is corrupted, then attacked. */
+    /* also give OOB information but note that OOB doesn't indicate attacked now */
+    if(0!=guard_buffer_check(guard_buffer, BUFFER_SIZE)){{
+        char log_string[] = "OOB\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+    if(0!=memcmp(value_before, value_after, ADDR_SIZE)){{
+        char log_string[] = "Pointer modified\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+
+    /* corrupt point value ABOVE --- malicious write via corrupted pointer BELOW */
+
+    /* save value_before */
+    memcpy(value_before, target, ADDR_SIZE);
+
+    char new_val[ADDR_SIZE];
+    {config[read]}read(0, new_val, ADDR_SIZE);
+    if("//"=="{config[read]}"){{
+        char *readin_buffer2 = (char *)malloc(ADDR_SIZE);
+        read(0, readin_buffer2, ADDR_SIZE);
+        {config[memcpy]}memcpy(new_val, readin_buffer2, ADDR_SIZE);
+        {config[bcopy]}bcopy(readin_buffer2, new_val, ADDR_SIZE);
+        {config[homebrew]}homebrew_memcpy(new_val, readin_buffer2, ADDR_SIZE);
+    }}
+
+    *(size_t *)(*(size_t *)pointer) = *(size_t *)new_val;
+
+    /* save value_after */
+    memcpy(value_after, target, ADDR_SIZE);
+
+    /* attack checks */
+    if(0!=memcmp(value_before, value_after, ADDR_SIZE)){{
+        char log_string[] = "Attacked: target modified\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+
+    {config[funcptr]}funcptr();
+    {config[GOT]}getuid();
+    {config[hook]}free(bad_chunk);
+    {config[exit]}exit(0);
+    {config[jmpbuf]}*(uintptr_t*)target = rol((uintptr_t)*(uintptr_t*)target);
+    {config[jmpbuf]}longjmp(env, 1);
+}}
+
+int main()
+{{
+    remove_files();
+    setvbuf(stdout, 0, 2, 0);
+    setvbuf(stdin, 0, 2, 0);
+    vul();
+}}

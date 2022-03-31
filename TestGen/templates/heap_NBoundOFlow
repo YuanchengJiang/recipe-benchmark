@@ -1,0 +1,78 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdarg.h>
+#include <assert.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <sys/ucontext.h>
+#include "RecIPE.h"
+
+#define BUFFER_SIZE {config[buffer_size]}
+
+char *target = NULL;
+char *input_buffer;
+char *guard_buffer;
+char value_before[ADDR_SIZE];
+char value_after[ADDR_SIZE];
+char *tmp_buffer;
+
+void vul()
+{{
+    assert(BUFFER_SIZE>=ADDR_SIZE);
+    char *ptrs[3];
+    for (int i=0; i < 3; i++) {{
+        ptrs[i] = (char *)malloc(BUFFER_SIZE);
+    }}
+    qsort(ptrs, 3, ADDR_SIZE, ptraddr_compare);
+    char *input_buffer = ptrs[0];
+    char *guard_buffer = ptrs[1];
+    {config[funcptr]}char *target = ptrs[2];
+    {config[funcptr]}*(size_t *)target = &foo;
+    int offset = (void*)target - (void*)input_buffer;
+
+    memset(input_buffer, INIT_CHAR, BUFFER_SIZE);
+    memset(guard_buffer, GUARD_CHAR, BUFFER_SIZE);
+
+    printf("bad_addr:%p\n", &jump_to_me);
+
+    size_t cSize = ADDR_SIZE;
+    size_t readin_length = cSize;
+
+    memcpy(value_before, target, ADDR_SIZE);
+
+    char *readin_place = input_buffer + offset;
+
+    {config[read]}read(0, readin_place, readin_length);
+    char readin_buffer[readin_length];
+    if("//"=="{config[read]}")
+        read(0, readin_buffer, readin_length);
+    {config[memcpy]}memcpy(readin_place, readin_buffer, readin_length);
+    {config[bcopy]}bcopy(readin_buffer, readin_place, readin_length);
+    {config[homebrew]}homebrew_memcpy(readin_place, readin_buffer, readin_length);
+
+    memcpy(value_after, target, ADDR_SIZE);
+
+    /* attack success checks */
+    if(0!=guard_buffer_check(guard_buffer, BUFFER_SIZE)){{
+        char log_string[] = "Attacked: OOB\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+    if(0!=memcmp(value_before, value_after, ADDR_SIZE)){{
+        char log_string[] = "Attacked: target modified\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+
+    {config[funcptr]}void (*funcptr)() = *(size_t *)ptrs[2];
+    {config[funcptr]}funcptr();
+}}
+
+int main()
+{{
+    remove_files();
+    setvbuf(stdout, 0, 2, 0);
+    setvbuf(stdin, 0, 2, 0);
+    vul();
+}}

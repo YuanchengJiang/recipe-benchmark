@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdarg.h>
+#include <assert.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <sys/ucontext.h>
+#include "RecIPE.h"
+
+#define BUFFER_SIZE {config[buffer_size]}
+
+struct RecIPE_struct
+{{
+    char a[BUFFER_SIZE];
+    char b[BUFFER_SIZE];
+    void (*funcptr)();
+    char c[BUFFER_SIZE];
+    char d[BUFFER_SIZE];
+}};
+
+char *target = NULL;
+int *input_buffer;
+char *guard_buffer;
+char value_before[ADDR_SIZE];
+char value_after[ADDR_SIZE];
+int *tmp_buffer;
+static struct RecIPE_struct my_struct;
+
+void vul()
+{{
+    assert(BUFFER_SIZE>=ADDR_SIZE);
+    
+    if(my_struct.a>my_struct.d){{
+        input_buffer = my_struct.d;
+        guard_buffer = my_struct.c;
+    }}else{{
+        input_buffer = my_struct.a;
+        guard_buffer = my_struct.b;
+    }}
+    {config[funcptr]}target = &my_struct.funcptr;
+    
+    /* initialization */
+    memset(input_buffer, INIT_CHAR, BUFFER_SIZE);
+    memset(guard_buffer, GUARD_CHAR, BUFFER_SIZE);
+
+    /* Calc offset and size */
+    size_t offset = (char *)target-(char *)input_buffer;
+    size_t corruption_size = ADDR_SIZE;
+    size_t readin_size = offset + corruption_size;
+
+    /* leak address information */
+    printf("input_addr:%p target_addr:%p bad_addr:%p\n", input_buffer, target, &jump_to_me);
+
+    /* save previous value */
+    memcpy(value_before, target, ADDR_SIZE);
+
+    /* stack overflow */
+    {config[read]}read(0, input_buffer, readin_size);
+    if("//"=="{config[read]}"){{
+        tmp_buffer = malloc(readin_size);
+        assert(tmp_buffer>0);
+        read(0, tmp_buffer, readin_size);
+        {config[memcpy]}memcpy(input_buffer, tmp_buffer, readin_size);
+        {config[bcopy]}bcopy(tmp_buffer, input_buffer, readin_size);
+        {config[homebrew]}homebrew_memcpy(input_buffer, tmp_buffer, readin_size);
+    }}
+
+    /* save after value */
+    memcpy(value_after, target, ADDR_SIZE);
+
+    /* attack success checks */
+    if(0!=guard_buffer_check(guard_buffer, BUFFER_SIZE)){{
+        char log_string[] = "Attacked: OOB\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+    if(0!=memcmp(value_before, value_after, ADDR_SIZE)){{
+        char log_string[] = "Attacked: target modified\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+
+    {config[funcptr]}my_struct.funcptr();
+}}
+
+
+int main()
+{{
+    remove_files();
+    setvbuf(stdout, 0, 2, 0);
+    setvbuf(stdin, 0, 2, 0);
+    vul();
+}}

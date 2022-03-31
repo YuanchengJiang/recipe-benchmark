@@ -1,0 +1,12 @@
+{
+    "retaddr": OFF,
+    "oldebp": OFF,
+    "funcptr": OFF,
+    "jmpbuf": OFF,
+    "read": OFF,
+    "memcpy": OFF,
+    "bcopy": OFF,
+    "homebrew": OFF,
+    "cor_size": 512,
+    "buffer_size": 64,
+}

@@ -1,0 +1,99 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdarg.h>
+#include <assert.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <sys/ucontext.h>
+#include "RecIPE.h"
+
+#define BUFFER_SIZE {config[buffer_size]}
+
+char *target = NULL;
+char *input_buffer;
+char *guard_buffer;
+char value_before[ADDR_SIZE];
+char value_after[ADDR_SIZE];
+char *tmp_buffer;
+
+static char a[BUFFER_SIZE] = "init";
+static char b[BUFFER_SIZE] = "init";
+
+void vul()
+{{
+    /* We only consider stack variable as target in Underflow */
+    char *l[2] = {{a,b}};
+    qsort(l, 2, ADDR_SIZE, ptraddr_compare);
+    input_buffer = l[1];
+    target = l[0];
+
+    /* Initialization. Suppose target has critical pointer value */
+    memset(input_buffer, INIT_CHAR, BUFFER_SIZE);
+    memset(target, INIT_CHAR, BUFFER_SIZE);
+    *(size_t *)target = &foo;
+
+    /* Memory Layout Check */
+    assert(input_buffer>target);
+    size_t offset = input_buffer-target;
+
+    /* Address Leak */
+    /* Please make sure the order is consistent with stack_NBoundUFlow class in VulExpLib */
+    printf("input_addr:%p target_addr:%p bad_addr:%p\n", input_buffer, target, &jump_to_me);
+
+    /* integer overflow */
+    short int index = 0;
+    char buf[16];
+    read(0, buf, 16);
+    if(strstr(buf, "-")){{
+        printf("index should not be negative\n");
+        exit(-1);
+    }}
+    index = atoi(buf);
+
+    /* save value before corruption */
+    memcpy(value_before, target, ADDR_SIZE);
+
+    /* calc dst pointer */
+    char *readin_start_pointer = input_buffer+index;
+    size_t readin_length = ADDR_SIZE;
+
+    /* check integer overflow */
+    assert(readin_start_pointer==target);
+    char log_string[]= "Integer Overflow: OK\n";
+    recipe_log(log_string, sizeof(log_string));
+
+    /* choose function; underflow happens here */
+    {config[read]}read(0, readin_start_pointer, readin_length);
+    if("//"=="{config[read]}"){{
+        char readin_buffer[readin_length];
+        read(0, readin_buffer, readin_length);
+        {config[memcpy]}memcpy(readin_start_pointer, readin_buffer, readin_length);
+        {config[bcopy]}bcopy(readin_buffer, readin_start_pointer, readin_length);
+        {config[homebrew]}homebrew_memcpy(readin_start_pointer, readin_buffer, readin_length);
+    }}
+
+    /* save value after corruption */
+    memcpy(value_after, target, ADDR_SIZE);
+
+    /* check target integrity */
+    if(0!=memcmp(value_before, value_after, ADDR_SIZE)){{
+        char log_string[] = "Attacked: target modified\n";
+        recipe_log(log_string, sizeof(log_string));
+    }}
+
+    /* if not attacked, it should call foo */
+    {config[funcptr]}void (*funcptr)() = *(size_t *)target;
+    {config[funcptr]}funcptr();
+}}
+
+
+int main()
+{{
+    remove_files();
+    setvbuf(stdout, 0, 2, 0);
+    setvbuf(stdin, 0, 2, 0);
+    vul();
+}}

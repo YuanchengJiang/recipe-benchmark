@@ -1,0 +1,8 @@
+{
+    "funcptr": OFF,
+    "read": OFF,
+    "memcpy": OFF,
+    "bcopy": OFF,
+    "homebrew": OFF,
+    "buffer_size": 256,
+}
