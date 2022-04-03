@@ -2,6 +2,7 @@
 
 import os
 import configparser
+from tqdm import tqdm
 from pathlib import Path
 from TestGenTree import testcase_getlist
 
@@ -66,12 +67,10 @@ clean:
 
 compile_cmd = conf.get('CONFIG', 'compile_cmd')
 makefile = makefile.format(compile_cmd)
-count = 0
 
 ### Step 3: General C Code ###
-for each_testcase in testcase_list:
-    print("[+] Generating Test Case: {}".format(each_testcase))
-    attrs = each_testcase.split("_")
+for i in tqdm(range(len(testcase_list))):
+    attrs = testcase_list[i].split("_")
     # i: get C code template
     template_name = "_".join(attrs[:2])
     f = open("{}/TestGen/templates/{}".format(RECIPE_ROOT,template_name), "r")
@@ -93,7 +92,7 @@ for each_testcase in testcase_list:
     # iv: format c code
     ccode = ccode_template.format(config=config_dict)
     # v: generate test case
-    testcase_path = "{}/Testcases/{}".format(RECIPE_ROOT, each_testcase)
+    testcase_path = "{}/Testcases/{}".format(RECIPE_ROOT, testcase_list[i])
     if not os.path.exists(testcase_path):
         os.mkdir(testcase_path)
     f = open("{}/main.c".format(testcase_path), "w")
@@ -108,11 +107,7 @@ for each_testcase in testcase_list:
     f = open("{}/Makefile".format(testcase_path), "w")
     f.write(makefile)
     f.close()
-    os.system("cd {}; make".format(testcase_path))
-    count += 1
-    progress = float(count/len(testcase_list))*100
-    print("recipe benchmark progress: {}%: ".format(int(progress)), "▋" * (int(progress) // 2), end="\n\n")
-    print()
+    os.system("cd {}; make > /dev/null".format(testcase_path))
 
     
     

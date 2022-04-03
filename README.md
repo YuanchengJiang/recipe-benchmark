@@ -32,6 +32,7 @@ If you use, extend or build upon RecIPE we kindly ask you to cite the original A
 * pwntools==4.7.0
 * configparse==0.1.5
 * treelib==1.6.1
+* tqdm==4.63.1
 
 `pip install -r requirements.txt`
 

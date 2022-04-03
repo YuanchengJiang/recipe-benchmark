@@ -6,6 +6,7 @@ import configparser
 
 # enable pwntools debug mode
 # context.log_level="debug"
+context.log_level = 'error'
 
 conf = configparser.ConfigParser()
 conf.read('DefEval.cfg', encoding='utf-8')

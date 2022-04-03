@@ -4,6 +4,7 @@ import json
 import codecs
 import time
 import configparser
+from tqdm import tqdm
 from pathlib import Path
 from DefEvalLib import *
 
@@ -27,9 +28,8 @@ def attack_all(runtime_defense=None):
     )
     head2 = ','.join(["Attack {}".format(i) for i in range(max_attack_times)])
     result_file.write(head1+head2+"\n")
-    current_testcase = 1
-    testcase_num = len(dir_list)
-    for dirpath in dir_list:
+    for i in tqdm(range(len(dir_list))):
+        dirpath = dir_list[i]
         region, technique, target, function = parse_dimensions(dirpath)
         class_name = globals()["recipe_{}_{}".format(region, technique)]
         for each_exploit in exploit_list:
@@ -44,9 +44,6 @@ def attack_all(runtime_defense=None):
                     break
                 time.sleep(0.1)
             result_file.write("\n")
-        progress = float(current_testcase/testcase_num)*100
-        print("recipe benchmark progress: {}%: ".format(int(progress)), "▋" * (int(progress) // 2), end="\n\n")
-        current_testcase += 1
     result_file.close()
 
 def result_summary():
