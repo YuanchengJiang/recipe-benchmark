@@ -17,12 +17,14 @@ attr_regions = conf.get('TestGenAttr', 'regions').split(',')
 attr_techniques = conf.get('TestGenAttr', 'techniques').split(',')
 attr_targets = conf.get('TestGenAttr', 'targets').split(',')
 attr_functions = conf.get('TestGenAttr', 'functions').split(',')
+customizations = conf.get('TestGenAttr', 'customizations').split(',')
 
 testcase_list = testcase_getlist(
             attr_regions,
             attr_techniques,
             attr_targets,
-            attr_functions
+            attr_functions,
+            customizations
         )
 
 ### Step 2: General Config for RecIPE.h ###
@@ -65,11 +67,97 @@ clean:
 \trm main gadget
 """
 
+### Customized Makefile ###
+customized_makefile="""
+all: main
+
+main: main.cpp
+\tg++ -o main main.cpp
+
+clean:
+\trm main
+"""
+
+### DynLink Makefile ###
+DynLink_makefile="""
+all: main
+CXX = clang++
+CXXFLAGS = -g -fsanitize=cfi -fvisibility=hidden -flto -L. -lclass
+
+libclass.so: libclass.cpp
+\t$(CXX) -c -fPIC -o libclass.o libclass.cpp
+\t$(CXX) -shared -o libclass.so libclass.o
+
+main: main.cpp libclass.so
+\t$(CXX) -o main main.cpp $(CXXFLAGS)
+
+clean:
+\trm main libclass.so libclass.o
+"""
+
+### Dlopen Makefile ###
+Dlopen_makefile="""
+all: main
+CXX = clang++
+CXXFLAGS = -g -fsanitize=cfi -fvisibility=hidden -flto -ldl
+
+libclass.so: libclass.cpp
+\t$(CXX) -c -fPIC -o libclass.o libclass.cpp
+\t$(CXX) -shared -o libclass.so libclass.o
+
+main: main.cpp libclass.so
+\t$(CXX) -o main main.cpp $(CXXFLAGS)
+
+clean:
+\trm main libclass.so libclass.o
+"""
+
 compile_cmd = conf.get('CONFIG', 'compile_cmd')
 makefile = makefile.format(compile_cmd)
 
 ### Step 3: General C Code ###
 for i in tqdm(range(len(testcase_list))):
+    # for customized testcase, directly format the template
+    if testcase_list[i].split("_")[0] == "cust":
+        ### This is for ClassMemCorr and ClassTypeConf ###
+        template_name = testcase_list[i]
+        f = open("{}/TestGen/templates/{}".format(RECIPE_ROOT,template_name), "r")
+        ccode_template = f.read()
+        f.close()
+        f = open("{}/TestGen/config/{}.json".format(RECIPE_ROOT,template_name), "r")
+        ccode_config = f.read()
+        f.close()
+        config_dict = eval(ccode_config)
+        for each_class in ["A1", "A2", "A11", "B1", "C1"]:
+            config_dict["class"] = each_class
+            ccode = ccode_template.format(config=config_dict)
+            testcase_path = "{}/Testcases/{}{}".format(RECIPE_ROOT, template_name, each_class)
+            if not os.path.exists(testcase_path):
+                os.mkdir(testcase_path)
+            if "DynLinkClassTypeConf" in template_name:
+                os.system("cp {}/TestGen/templates/customized_files/class.h {}".format(RECIPE_ROOT, testcase_path))
+                os.system("cp {}/TestGen/templates/customized_files/libclass.cpp {}".format(RECIPE_ROOT, testcase_path))
+            if "DynLinkClassMemCorr" in template_name:
+                os.system("cp {}/TestGen/templates/customized_files/allclass.h {}".format(RECIPE_ROOT, testcase_path))
+                os.system("cp {}/TestGen/templates/customized_files/createA1.cpp {}/libclass.cpp".format(RECIPE_ROOT, testcase_path))
+            if "Dlopen" in template_name:
+                os.system("cp {}/TestGen/templates/customized_files/allclass.h {}".format(RECIPE_ROOT, testcase_path))
+                os.system("cp {}/TestGen/templates/customized_files/createA1.cpp {}/libclass.cpp".format(RECIPE_ROOT, testcase_path))
+            f = open("{}/main.cpp".format(testcase_path), "w")
+            f.write(ccode)
+            f.close()
+            f = open("{}/Makefile".format(testcase_path), "w")
+            if "DynLink" in template_name:
+                f.write(DynLink_makefile)
+            elif "Dlopen" in template_name:
+                f.write(Dlopen_makefile)
+            else:
+                f.write(customized_makefile)
+            f.close()
+            os.system("cd {}; make > /dev/null".format(testcase_path))
+        continue
+    if testcase_list[i]=="":
+        continue
     attrs = testcase_list[i].split("_")
     # i: get C code template
     template_name = "_".join(attrs[:2])

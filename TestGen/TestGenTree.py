@@ -27,7 +27,7 @@ def function_get_possible_parent(function):
     # all functions are compatible
     pass
 
-def testcase_getlist(attr_regions, attr_techniques, attr_targets, attr_functions):
+def testcase_getlist(attr_regions, attr_techniques, attr_targets, attr_functions, customizations):
     tree = Tree()
     tree.create_node("RecIPE", "root")
     # first create subtree for each region
@@ -74,4 +74,6 @@ def testcase_getlist(attr_regions, attr_techniques, attr_targets, attr_functions
         if tree.depth(each_leaf)!=4:
             continue
         testcase_list.append(each_leaf.identifier)
+    for each_cutomized_testcase in customizations:
+        testcase_list.append(each_cutomized_testcase)
     return testcase_list

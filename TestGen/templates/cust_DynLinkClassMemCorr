@@ -1,0 +1,22 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "allclass.h"
+
+A* create_A1();
+
+void mem_corruption()
+{{
+	struct {{long x; {config[class]} *a;}} S;
+    long buf[1];
+    S.a = new {config[class]}();
+    buf[0] = (unsigned long) create_A1();
+    memcpy(&S.a, buf, sizeof(long));
+    (S.a)->f();
+	puts("Mem corruption attack succeeds");
+}}
+
+int main()
+{{
+	mem_corruption();
+}}

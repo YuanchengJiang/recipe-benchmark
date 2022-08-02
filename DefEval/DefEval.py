@@ -30,6 +30,10 @@ def attack_all(runtime_defense=None):
     result_file.write(head1+head2+"\n")
     for i in tqdm(range(len(dir_list))):
         dirpath = dir_list[i]
+        print(dirpath)
+        if "cust_" in dirpath:
+            new_attack = call_elf(None, dirpath, result_file, None, None)
+            continue
         region, technique, target, function = parse_dimensions(dirpath)
         class_name = globals()["recipe_{}_{}".format(region, technique)]
         for each_exploit in exploit_list:

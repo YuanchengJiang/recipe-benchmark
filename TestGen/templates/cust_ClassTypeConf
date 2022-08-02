@@ -1,0 +1,26 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+class A {{ public: virtual void f() = 0; }};
+class B {{ public: virtual void f() = 0; }};
+class C {{ public: virtual int f() = 0; }};
+class A1: public A {{public:void f(){{puts("A1-VCALL");}}}};
+class A2: public A {{public:void f(){{puts("A2-VCALL");}}}};
+class A11: public A1 {{public:void f(){{puts("A11-VCALL");}}}};
+class B1: public B {{public:void f(){{puts("B1-VCALL");}}}};
+class C1: public C {{public:int f(){{puts("C1-VCALL"); return 0;}}}};
+
+void type_confusion()
+{{
+	struct {{ long x; A1 *a;}} S;
+	long buf[1];
+	S.a = new A1();
+    (({config[class]}*) S.a)->f();
+	puts("type confusion attack succeeds");
+}}
+
+int main()
+{{
+	type_confusion();
+}}

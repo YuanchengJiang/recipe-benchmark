@@ -1,0 +1,18 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "class.h"
+
+void type_confusion()
+{{
+	struct {{ long x; A1 *a;}} S;
+	long buf[1];
+	S.a = new A1();
+    (({config[class]}*) S.a)->f();
+	puts("type confusion attack succeeds");
+}}
+
+int main()
+{{
+	type_confusion();
+}}

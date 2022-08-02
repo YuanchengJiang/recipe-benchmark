@@ -92,8 +92,13 @@ class recipe_attack:
 		self.cmd_addr = 0xdeadbeef
 		self.pointer_addr = 0xdeadbeef
 		self.exit_addr = 0xdeadbeef
-		self.gadget = get_gadget_dict("{}/gadget".format(path))
 		self.result_fp = result_fp
+		try:
+			self.gadget = get_gadget_dict("{}/gadget".format(path))
+		except:
+			print("no gadget info")
+			pass
+
 
 	def record(self, msg):
 		f = open(self.record_file, "a")
@@ -192,6 +197,12 @@ class recipe_attack:
 			self.record("{},".format(result))
 			self.trykill(p)
 			return 0
+
+### simply call the elf to check attack result, no exploit applied
+class call_elf(recipe_attack):
+	def start(self):
+		p = process(self.elf)
+
 
 ### boundary overflow ###
 
