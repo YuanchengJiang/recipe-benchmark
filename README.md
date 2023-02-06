@@ -2,7 +2,7 @@
 
 RecIPE is a newly developed benchmark for evaluating memory error defenses' effectiveness.
 
-RecIPE will be/was presented as [RecIPE: Revisiting the Evaluation of Memory Error Defenses](https://yuanchengjiang.github.io/asiaccs22-recipe.pdf) at The 17th ACM ASIA Conference on Computer and Communications Security (ACM ASIACCS 2022) in Nagasaki from May 30th to June 3rd, 2022. 
+RecIPE will be/was presented as [RecIPE: Revisiting the Evaluation of Memory Error Defenses](https://dl.acm.org/doi/pdf/10.1145/3488932.3524127) at The 17th ACM ASIA Conference on Computer and Communications Security (ACM ASIACCS 2022) in Nagasaki from May 30th to June 3rd, 2022. 
 
 If you use, extend or build upon RecIPE we kindly ask you to cite the original AsiaCCS paper. Here's the BibTeX:
 
