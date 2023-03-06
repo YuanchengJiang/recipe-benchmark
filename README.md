@@ -52,6 +52,15 @@ cd DefEval; ./DefEval.py
 
 **Before evaluating your memory error defense, please first check the baseline(the default compiling options; without any defense) results and make sure most attacks/exploits succeed**
 
+*Question: Run with runtime defense like Valgrind?*
+
+Currently we only ad-hoc support valgrind, and you need to specify the runtime_defense when calling attack_all(runtime_defense=None) in DefEval.py.
+```
+attack_all() => attack_all("valgrind")
+```
+
+To support other runtime defenses, you need to add your supporting code in DefEvalLib.py (e.g., removing extra printing info)
+
 ### Result Format
 
 The output file is in csv format:
