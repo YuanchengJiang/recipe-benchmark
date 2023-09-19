@@ -7,7 +7,7 @@ RecIPE will be/was presented as [RecIPE: Revisiting the Evaluation of Memory Err
 If you use, extend or build upon RecIPE we kindly ask you to cite the original AsiaCCS paper. Here's the BibTeX:
 
 ```
-@inproceedings{yuancheng2022recipe,
+@inproceedings{jiang2022recipe,
   title={RecIPE: Revisiting the Evaluation of Memory Error Defenses},
   author={Jiang, Yuancheng and Yap, Roland H.C. and Liang, Zhenkai and Rosier, Hubert},
   editor={Ding, Xuhua and Sako, Kazue},
