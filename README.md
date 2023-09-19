@@ -10,9 +10,8 @@ If you use, extend or build upon RecIPE we kindly ask you to cite the original A
 @inproceedings{jiang2022recipe,
   title={RecIPE: Revisiting the Evaluation of Memory Error Defenses},
   author={Jiang, Yuancheng and Yap, Roland H.C. and Liang, Zhenkai and Rosier, Hubert},
-  editor={Ding, Xuhua and Sako, Kazue},
-  booktitle={{ASIA} {CCS} '22: Proceedings of the 2022 {ACM} Asia Conference on Computer and Communications Security},
-  publisher = {{ACM}},
+  booktitle={Proceedings of the 2022 ACM on Asia Conference on Computer and Communications Security},
+  pages={574--588},
   year={2022},
   doi = {10.1145/3488932.3524127}
 }
